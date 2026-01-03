@@ -44,7 +44,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 
 // ================= ENV =================
-const PORT = process.env.PORT;
+
 const MONGO_URI = process.env.MONGO_URI;
 
 // ================= DB =================
@@ -206,9 +206,8 @@ app.get("/class/:classId/export", async (req, res) => {
 
 // ================= START SERVER =================
 
+const PORT = process.env.PORT;
 
-
-
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
