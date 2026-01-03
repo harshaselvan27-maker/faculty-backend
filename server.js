@@ -27,7 +27,6 @@ if (!fs.existsSync("uploads")) {
 }
 
 // ================= MIDDLEWARE =================
-// ================= MIDDLEWARE =================
 app.use(
   cors({
     origin: "*",
@@ -38,13 +37,11 @@ app.use(
 
 app.options("*", cors());
 
-// 🔥 REQUIRED FOR RENDER + FILE UPLOADS
+// 🔥 REQUIRED FOR FILE UPLOADS
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-
 // ================= ENV =================
-
 const MONGO_URI = process.env.MONGO_URI;
 
 // ================= DB =================
@@ -55,6 +52,11 @@ mongoose
     console.error("MongoDB Error:", err.message);
     process.exit(1);
   });
+
+// ================= HEALTH CHECK (🔥 REQUIRED FOR RAILWAY) =================
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
 
 // ================= ROOT =================
 app.get("/", (req, res) => {
@@ -68,7 +70,7 @@ app.use("/leave", leaveRoutes);
 app.use("/achievements", achievementRoutes);
 app.use("/syllabus", syllabusRoutes);
 
-// ✅ STATIC FILE SERVING (UPLOADS)
+// ================= STATIC FILES =================
 app.use("/uploads", express.static("uploads"));
 
 // ================= CLASS MANAGEMENT =================
@@ -126,7 +128,7 @@ app.post("/student", async (req, res) => {
     const student = await StudentModel.create(req.body);
     res.json(student);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json(formData({ error: err.message }));
   }
 });
 
@@ -205,8 +207,7 @@ app.get("/class/:classId/export", async (req, res) => {
 });
 
 // ================= START SERVER =================
-
-const PORT = process.env.PORT;
+const PORT = Number(process.env.PORT);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
