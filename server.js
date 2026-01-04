@@ -43,10 +43,10 @@ mongoose
   .then(() => console.log("MongoDB Connected ✔"))
   .catch((err) => {
     console.error("MongoDB Error:", err.message);
-    process.exit(1);
+    process.exit(1); // OK here (startup failure)
   });
 
-/* ===================== HEALTH CHECK (IMPORTANT) ===================== */
+/* ===================== HEALTH CHECK (CRITICAL) ===================== */
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "OK" });
 });
@@ -114,7 +114,16 @@ app.get("/class/:classId/export", async (req, res) => {
   }
 });
 
-/* ===================== START SERVER (CRITICAL) ===================== */
+/* ===================== GLOBAL ERROR HANDLER ===================== */
+app.use((err, req, res, next) => {
+  console.error("UNHANDLED ERROR:", err);
+  res.status(500).json({
+    success: false,
+    message: "Server error",
+  });
+});
+
+/* ===================== START SERVER ===================== */
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, "0.0.0.0", () => {
