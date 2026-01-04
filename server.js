@@ -5,12 +5,14 @@ import dotenv from "dotenv";
 import ExcelJS from "exceljs";
 import fs from "fs";
 
+// Routes
 import todoRoutes from "./routes/todo.js";
 import authRoutes from "./routes/auth.js";
 import leaveRoutes from "./routes/leave.js";
 import achievementRoutes from "./routes/achievements.js";
 import syllabusRoutes from "./routes/syllabus.js";
 
+// Models
 import ClassModel from "./models/Class.js";
 import StudentModel from "./models/Student.js";
 
@@ -18,57 +20,71 @@ dotenv.config();
 
 const app = express();
 
-// Ensure uploads folder
+/* ===================== ENSURE UPLOADS FOLDER ===================== */
 if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
+  fs.mkdirSync("uploads", { recursive: true });
 }
 
-// Middleware
-app.use(cors());
+/* ===================== MIDDLEWARE ===================== */
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-// DB
+/* ===================== DATABASE ===================== */
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected ✔"))
   .catch((err) => {
-    console.error(err);
+    console.error("MongoDB Error:", err.message);
     process.exit(1);
   });
 
-// Health/root
+/* ===================== HEALTH CHECK (IMPORTANT) ===================== */
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "OK" });
+});
+
+/* ===================== ROOT ===================== */
 app.get("/", (req, res) => {
   res.json({ success: true, message: "Faculty Backend Running 🚀" });
 });
 
-// Routes
+/* ===================== ROUTES ===================== */
 app.use("/auth", authRoutes);
 app.use("/todo", todoRoutes);
 app.use("/leave", leaveRoutes);
 app.use("/achievements", achievementRoutes);
 app.use("/syllabus", syllabusRoutes);
 
-// Static
+/* ===================== STATIC FILES ===================== */
 app.use("/uploads", express.static("uploads"));
 
-// Student
+/* ===================== STUDENTS ===================== */
 app.post("/student", async (req, res) => {
   try {
     const student = await StudentModel.create(req.body);
-    res.json(student);
+    res.status(201).json(student);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Excel
+/* ===================== EXPORT TO EXCEL ===================== */
 app.get("/class/:classId/export", async (req, res) => {
   try {
     const cls = await ClassModel.findById(req.params.classId);
     if (!cls) return res.status(404).json({ error: "Class not found" });
 
-    const students = await StudentModel.find({ classId: req.params.classId });
+    const students = await StudentModel.find({
+      classId: req.params.classId,
+    });
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Students");
@@ -93,13 +109,14 @@ app.get("/class/:classId/export", async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Excel Error:", err.message);
+    res.status(500).json({ error: "Excel export failed" });
   }
 });
 
-// ✅ START SERVER (CRITICAL)
+/* ===================== START SERVER (CRITICAL) ===================== */
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
