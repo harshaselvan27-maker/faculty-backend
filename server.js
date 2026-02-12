@@ -34,8 +34,9 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: "20mb" }));
-app.use(express.urlencoded({ extended: true, limit: "20mb" }));
+// 🔥 Increased limits for uploads
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 /* ===================== DATABASE ===================== */
 mongoose
@@ -43,10 +44,10 @@ mongoose
   .then(() => console.log("MongoDB Connected ✔"))
   .catch((err) => {
     console.error("MongoDB Error:", err.message);
-    process.exit(1); // OK here (startup failure)
+    process.exit(1);
   });
 
-/* ===================== HEALTH CHECK (CRITICAL) ===================== */
+/* ===================== HEALTH CHECK ===================== */
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "OK" });
 });
@@ -80,7 +81,8 @@ app.post("/student", async (req, res) => {
 app.get("/class/:classId/export", async (req, res) => {
   try {
     const cls = await ClassModel.findById(req.params.classId);
-    if (!cls) return res.status(404).json({ error: "Class not found" });
+    if (!cls)
+      return res.status(404).json({ error: "Class not found" });
 
     const students = await StudentModel.find({
       classId: req.params.classId,
@@ -119,7 +121,7 @@ app.use((err, req, res, next) => {
   console.error("UNHANDLED ERROR:", err);
   res.status(500).json({
     success: false,
-    message: "Server error",
+    message: err.message || "Server error",
   });
 });
 
