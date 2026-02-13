@@ -1,50 +1,53 @@
 import express from "express";
-import Class from "../models/Class.js";
-import Student from "../models/Student.js";
+import ClassModel from "../models/Class.js";
 
 const router = express.Router();
 
-/* 🔹 Create Class */
-router.post("/class", async (req, res) => {
-  const cls = await Class.create({
-    name: req.body.name,
-    columns: ["registerNo", "name", "phone"],
-  });
-  res.json(cls);
+/* ================= CREATE CLASS ================= */
+router.post("/create", async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.json({
+        success: false,
+        message: "Class name required",
+      });
+    }
+
+    const newClass = new ClassModel({
+      name: name.trim(),
+      columns: ["registerNo", "name"], // force default
+    });
+
+    await newClass.save();
+
+    res.json({
+      success: true,
+      data: newClass,
+    });
+
+  } catch (err) {
+    console.error("CREATE CLASS ERROR:", err.message);
+    res.json({
+      success: false,
+      message: err.message,
+    });
+  }
 });
 
-/* 🔹 Get All Classes */
-router.get("/class", async (req, res) => {
-  const classes = await Class.find();
-  res.json(classes);
-});
-
-/* 🔹 Get Class By ID */
-router.get("/class/:id", async (req, res) => {
-  const cls = await Class.findById(req.params.id);
-  res.json(cls);
-});
-
-/* 🔹 Update Columns */
-router.put("/class/:id/columns", async (req, res) => {
-  const cls = await Class.findByIdAndUpdate(
-    req.params.id,
-    { columns: req.body.columns },
-    { new: true }
-  );
-  res.json(cls);
-});
-
-/* 🔹 Add Student */
-router.post("/student", async (req, res) => {
-  const student = await Student.create(req.body);
-  res.json(student);
-});
-
-/* 🔹 Get Students */
-router.get("/students/:classId", async (req, res) => {
-  const students = await Student.find({ classId: req.params.classId });
-  res.json(students);
+/* ================= LIST CLASSES ================= */
+router.get("/list", async (req, res) => {
+  try {
+    const classes = await ClassModel.find().sort({ _id: -1 });
+    res.json({
+      success: true,
+      classes,
+    });
+  } catch (err) {
+    console.error("LIST ERROR:", err.message);
+    res.json({ success: false });
+  }
 });
 
 export default router;

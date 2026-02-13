@@ -11,6 +11,7 @@ import authRoutes from "./routes/auth.js";
 import leaveRoutes from "./routes/leave.js";
 import achievementRoutes from "./routes/achievements.js";
 import syllabusRoutes from "./routes/syllabus.js";
+import classRoutes from "./routes/class.js";   // ✅ ADDED
 
 // Models
 import ClassModel from "./models/Class.js";
@@ -25,7 +26,7 @@ if (!fs.existsSync("uploads")) {
   fs.mkdirSync("uploads", { recursive: true });
 }
 
-/* ===================== CORS (VERY IMPORTANT FIX) ===================== */
+/* ===================== CORS ===================== */
 const corsOptions = {
   origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -33,21 +34,18 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // 🔥 IMPORTANT FOR MULTIPART
+app.options("*", cors(corsOptions));
 
-/* ===================== BODY LIMITS ===================== */
+/* ===================== BODY PARSERS ===================== */
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 /* ===================== DATABASE ===================== */
 mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("MongoDB Connected ✔"))
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => {
-    console.error("MongoDB Error:", err.message);
+    console.error("❌ MongoDB Error:", err.message);
     process.exit(1);
   });
 
@@ -67,11 +65,12 @@ app.use("/todo", todoRoutes);
 app.use("/leave", leaveRoutes);
 app.use("/achievements", achievementRoutes);
 app.use("/syllabus", syllabusRoutes);
+app.use("/class", classRoutes);   // ✅ CLASS ROUTES ADDED
 
 /* ===================== STATIC FILES ===================== */
 app.use("/uploads", express.static("uploads"));
 
-/* ===================== STUDENTS ===================== */
+/* ===================== CREATE STUDENT ===================== */
 app.post("/student", async (req, res) => {
   try {
     const student = await StudentModel.create(req.body);
@@ -85,8 +84,9 @@ app.post("/student", async (req, res) => {
 app.get("/class/:classId/export", async (req, res) => {
   try {
     const cls = await ClassModel.findById(req.params.classId);
-    if (!cls)
+    if (!cls) {
       return res.status(404).json({ error: "Class not found" });
+    }
 
     const students = await StudentModel.find({
       classId: req.params.classId,
@@ -107,6 +107,7 @@ app.get("/class/:classId/export", async (req, res) => {
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
+
     res.setHeader(
       "Content-Disposition",
       "attachment; filename=students.xlsx"
@@ -114,6 +115,7 @@ app.get("/class/:classId/export", async (req, res) => {
 
     await workbook.xlsx.write(res);
     res.end();
+
   } catch (err) {
     console.error("Excel Error:", err.message);
     res.status(500).json({ error: "Excel export failed" });

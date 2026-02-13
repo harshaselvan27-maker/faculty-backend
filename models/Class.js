@@ -1,11 +1,18 @@
 import mongoose from "mongoose";
 
-const ClassSchema = new mongoose.Schema({
-  name: { type: String, required: true },
+const classSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
   columns: {
     type: [String],
-    default: ["registerNo", "name", "phone"],
+    default: ["registerNo", "name"],
   },
 });
 
-export default mongoose.model("Class", ClassSchema);
+const ClassModel =
+  mongoose.models.Class ||
+  mongoose.model("Class", classSchema);
+
+export default ClassModel;
