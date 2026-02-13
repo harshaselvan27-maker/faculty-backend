@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import ExcelJS from "exceljs";
 import fs from "fs";
 
-// Routes
+// ROUTES
 import todoRoutes from "./routes/todo.js";
 import authRoutes from "./routes/auth.js";
 import leaveRoutes from "./routes/leave.js";
@@ -13,24 +13,28 @@ import achievementRoutes from "./routes/achievements.js";
 import syllabusRoutes from "./routes/syllabus.js";
 import classRoutes from "./routes/class.js";
 
-// Models
+// MODELS
 import ClassModel from "./models/Class.js";
 import StudentModel from "./models/Student.js";
 
 dotenv.config();
+
 const app = express();
 
-/* ===================== ENSURE UPLOADS FOLDER ===================== */
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads", { recursive: true });
-}
-
-/* ===================== CORS ===================== */
+/* ================= CORS ================= */
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/* ===================== DATABASE ===================== */
+/* ================= ENSURE UPLOADS ================= */
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads", { recursive: true });
+}
+
+/* ================= STATIC FILES ================= */
+app.use("/uploads", express.static("uploads"));
+
+/* ================= DATABASE ================= */
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
@@ -39,12 +43,17 @@ mongoose
     process.exit(1);
   });
 
-/* ===================== ROOT ===================== */
+/* ================= HEALTH CHECK ================= */
+app.get("/health", (req, res) => {
+  res.json({ status: "OK" });
+});
+
+/* ================= ROOT ================= */
 app.get("/", (req, res) => {
   res.json({ success: true, message: "Faculty Backend Running 🚀" });
 });
 
-/* ===================== ROUTES ===================== */
+/* ================= ROUTES ================= */
 app.use("/auth", authRoutes);
 app.use("/todo", todoRoutes);
 app.use("/leave", leaveRoutes);
@@ -52,7 +61,7 @@ app.use("/achievements", achievementRoutes);
 app.use("/syllabus", syllabusRoutes);
 app.use("/class", classRoutes);
 
-/* ===================== STUDENT ROUTES ===================== */
+/* ================= STUDENT CRUD ================= */
 
 /* GET STUDENTS BY CLASS */
 app.get("/student/:classId", async (req, res) => {
@@ -104,7 +113,7 @@ app.delete("/student/:id", async (req, res) => {
   }
 });
 
-/* ===================== EXPORT TO EXCEL ===================== */
+/* ================= EXPORT TO EXCEL ================= */
 app.get("/class/:classId/export", async (req, res) => {
   try {
     const cls = await ClassModel.findById(req.params.classId);
@@ -143,7 +152,7 @@ app.get("/class/:classId/export", async (req, res) => {
   }
 });
 
-/* ===================== START SERVER ===================== */
+/* ================= START SERVER ================= */
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
