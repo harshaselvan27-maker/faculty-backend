@@ -1,35 +1,37 @@
 import express from "express";
 import multer from "multer";
 import mongoose from "mongoose";
-import { GridFSBucket } from "mongodb";
+import fs from "fs";
+import path from "path";
 
 const router = express.Router();
 
 console.log("✅ syllabus routes loaded");
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+/* ================= STORAGE ================= */
+const uploadDir = "uploads";
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueName = Date.now() + "-" + file.originalname;
+    cb(null, uniqueName);
+  },
 });
 
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
 
-/* ===============================
-   GET GRIDFS BUCKET
-=============================== */
-const getBucket = () => {
-  if (!mongoose.connection.db) {
-    throw new Error("MongoDB not connected");
-  }
-
-  return new GridFSBucket(mongoose.connection.db, {
-    bucketName: "uploads",
-  });
-};
-
-/* ===============================
-   UPLOAD
-=============================== */
-router.post("/upload", upload.single("file"), async (req, res) => {
+/* ================= UPLOAD ================= */
+router.post("/upload", upload.single("file"), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -38,79 +40,59 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       });
     }
 
-    const bucket = getBucket();
-
-    const uploadStream = bucket.openUploadStream(
-      req.file.originalname,
-      {
-        contentType: req.file.mimetype,
-      }
-    );
-
-    uploadStream.end(req.file.buffer);
-
-    uploadStream.on("finish", () => {
-      res.json({
-        success: true,
-        fileId: uploadStream.id,
-        filename: req.file.originalname,
-      });
+    res.json({
+      success: true,
+      file: {
+        id: req.file.filename,
+        filename: req.file.filename,
+        uploadDate: new Date(),
+      },
     });
-
   } catch (err) {
-    console.error("UPLOAD ERROR:", err);
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    console.error("UPLOAD ERROR:", err.message);
+    res.status(500).json({ success: false });
   }
 });
 
-/* ===============================
-   LIST FILES
-=============================== */
-router.get("/list", async (req, res) => {
+/* ================= LIST FILES ================= */
+router.get("/list", (req, res) => {
   try {
-    const files = await mongoose.connection.db
-      .collection("uploads.files")
-      .find({})
-      .sort({ uploadDate: -1 })
-      .toArray();
+    const files = fs.readdirSync(uploadDir).map((file) => ({
+      _id: file,
+      filename: file,
+      uploadDate: fs.statSync(path.join(uploadDir, file)).mtime,
+    }));
 
     res.json({ success: true, files });
   } catch (err) {
+    console.error("LIST ERROR:", err.message);
     res.status(500).json({ success: false });
   }
 });
 
-/* ===============================
-   VIEW FILE
-=============================== */
-router.get("/pdf/:id", async (req, res) => {
-  try {
-    const bucket = getBucket();
-    const fileId = new mongoose.Types.ObjectId(req.params.id);
+/* ================= VIEW FILE ================= */
+router.get("/pdf/:id", (req, res) => {
+  const filePath = path.join(uploadDir, req.params.id);
 
-    res.set("Content-Type", "application/pdf");
-
-    bucket.openDownloadStream(fileId).pipe(res);
-  } catch (err) {
-    res.status(500).json({ success: false });
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ success: false });
   }
+
+  res.sendFile(path.resolve(filePath));
 });
 
-/* ===============================
-   DELETE FILE
-=============================== */
-router.post("/delete/:id", async (req, res) => {
+/* ================= DELETE FILE ================= */
+router.post("/delete/:id", (req, res) => {
   try {
-    const bucket = getBucket();
-    const fileId = new mongoose.Types.ObjectId(req.params.id);
+    const filePath = path.join(uploadDir, req.params.id);
 
-    await bucket.delete(fileId);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
 
     res.json({ success: true });
   } catch (err) {
+    console.error("DELETE ERROR:", err.message);
     res.status(500).json({ success: false });
   }
 });
