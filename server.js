@@ -25,22 +25,26 @@ if (!fs.existsSync("uploads")) {
   fs.mkdirSync("uploads", { recursive: true });
 }
 
-/* ===================== MIDDLEWARE ===================== */
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+/* ===================== CORS (VERY IMPORTANT FIX) ===================== */
+const corsOptions = {
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
-// 🔥 Increased limits for uploads
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // 🔥 IMPORTANT FOR MULTIPART
+
+/* ===================== BODY LIMITS ===================== */
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 /* ===================== DATABASE ===================== */
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log("MongoDB Connected ✔"))
   .catch((err) => {
     console.error("MongoDB Error:", err.message);

@@ -7,18 +7,14 @@ const router = express.Router();
 
 console.log("✅ syllabus routes loaded");
 
-/* ===============================
-   MULTER CONFIG (🔥 FIXED)
-=============================== */
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB limit
-  },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
 });
 
+
 /* ===============================
-   SAFE GRIDFS BUCKET
+   GET GRIDFS BUCKET
 =============================== */
 const getBucket = () => {
   if (!mongoose.connection.db) {
@@ -31,7 +27,7 @@ const getBucket = () => {
 };
 
 /* ===============================
-   UPLOAD PDF
+   UPLOAD
 =============================== */
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
@@ -46,7 +42,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     const uploadStream = bucket.openUploadStream(
       req.file.originalname,
-      { contentType: req.file.mimetype }
+      {
+        contentType: req.file.mimetype,
+      }
     );
 
     uploadStream.end(req.file.buffer);
@@ -59,14 +57,12 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       });
     });
 
-    uploadStream.on("error", (err) => {
-      console.error("GridFS Upload Error:", err.message);
-      res.status(500).json({ success: false, error: err.message });
-    });
-
   } catch (err) {
-    console.error("UPLOAD ERROR:", err.message);
-    res.status(500).json({ success: false, error: err.message });
+    console.error("UPLOAD ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 });
 
@@ -83,7 +79,6 @@ router.get("/list", async (req, res) => {
 
     res.json({ success: true, files });
   } catch (err) {
-    console.error("LIST ERROR:", err.message);
     res.status(500).json({ success: false });
   }
 });
@@ -91,23 +86,15 @@ router.get("/list", async (req, res) => {
 /* ===============================
    VIEW FILE
 =============================== */
-router.get("/pdf/:id", (req, res) => {
+router.get("/pdf/:id", async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid file ID",
-      });
-    }
-
     const bucket = getBucket();
     const fileId = new mongoose.Types.ObjectId(req.params.id);
 
-    res.setHeader("Content-Type", "application/pdf");
-    bucket.openDownloadStream(fileId).pipe(res);
+    res.set("Content-Type", "application/pdf");
 
+    bucket.openDownloadStream(fileId).pipe(res);
   } catch (err) {
-    console.error("VIEW ERROR:", err.message);
     res.status(500).json({ success: false });
   }
 });
@@ -117,22 +104,13 @@ router.get("/pdf/:id", (req, res) => {
 =============================== */
 router.post("/delete/:id", async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid file ID",
-      });
-    }
-
     const bucket = getBucket();
     const fileId = new mongoose.Types.ObjectId(req.params.id);
 
     await bucket.delete(fileId);
 
     res.json({ success: true });
-
   } catch (err) {
-    console.error("DELETE ERROR:", err.message);
     res.status(500).json({ success: false });
   }
 });
