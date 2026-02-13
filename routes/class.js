@@ -49,5 +49,16 @@ router.get("/list", async (req, res) => {
     res.json({ success: false });
   }
 });
+/* ================= GET SINGLE CLASS ================= */
+router.get("/:id", async (req, res) => {
+  try {
+    const cls = await ClassModel.findById(req.params.id);
+    res.json(cls);
+  } catch (err) {
+    console.log("GET CLASS ERROR:", err);
+    res.status(500).json({});
+  }
+});
+
 
 export default router;
