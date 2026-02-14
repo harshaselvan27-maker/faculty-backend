@@ -1,27 +1,24 @@
 import express from "express";
 import ClassModel from "../models/Class.js";
+import StudentModel from "../models/Student.js";
 
 const router = express.Router();
 
 /* CREATE CLASS */
 router.post("/create", async (req, res) => {
-  try {
-    const { name } = req.body;
+  const { name } = req.body;
 
-    const newClass = await ClassModel.create({
-      name,
-      columns: ["registerNo", "name"], // default excel columns
-    });
+  const newClass = await ClassModel.create({
+    name,
+    columns: ["registerNo", "name"],
+  });
 
-    res.json({ success: true, data: newClass });
-  } catch (err) {
-    res.json({ success: false });
-  }
+  res.json({ success: true, class: newClass });
 });
 
-/* GET ALL CLASSES */
+/* GET CLASSES */
 router.get("/list", async (req, res) => {
-  const classes = await ClassModel.find().sort({ _id: -1 });
+  const classes = await ClassModel.find();
   res.json({ success: true, classes });
 });
 
@@ -31,42 +28,51 @@ router.get("/:id", async (req, res) => {
   res.json(cls);
 });
 
-/* UPDATE CLASS NAME */
-router.put("/:id", async (req, res) => {
-  try {
-    const updated = await ClassModel.findByIdAndUpdate(
-      req.params.id,
-      { name: req.body.name },
-      { new: true }
-    );
-    res.json(updated);
-  } catch {
-    res.status(500).json({});
-  }
+/* UPDATE COLUMNS */
+router.put("/:id/columns", async (req, res) => {
+  const { columns } = req.body;
+  await ClassModel.findByIdAndUpdate(req.params.id, { columns });
+  res.json({ success: true });
 });
 
 /* DELETE CLASS */
 router.delete("/:id", async (req, res) => {
-  try {
-    await ClassModel.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-  } catch {
-    res.status(500).json({ success: false });
-  }
+  await StudentModel.deleteMany({ classId: req.params.id });
+  await ClassModel.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
 });
 
-/* UPDATE COLUMNS */
-router.put("/:id/columns", async (req, res) => {
-  try {
-    const updated = await ClassModel.findByIdAndUpdate(
-      req.params.id,
-      { columns: req.body.columns },
-      { new: true }
-    );
-    res.json(updated);
-  } catch {
-    res.status(500).json({});
-  }
+/* ================= STUDENTS ================= */
+
+/* ADD STUDENT */
+router.post("/:id/student", async (req, res) => {
+  const student = await StudentModel.create({
+    classId: req.params.id,
+    data: req.body,
+  });
+  res.json(student);
+});
+
+/* GET STUDENTS */
+router.get("/:id/students", async (req, res) => {
+  const students = await StudentModel.find({
+    classId: req.params.id,
+  });
+  res.json(students);
+});
+
+/* UPDATE STUDENT */
+router.put("/student/:id", async (req, res) => {
+  await StudentModel.findByIdAndUpdate(req.params.id, {
+    data: req.body,
+  });
+  res.json({ success: true });
+});
+
+/* DELETE STUDENT */
+router.delete("/student/:id", async (req, res) => {
+  await StudentModel.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
 });
 
 export default router;
