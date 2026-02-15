@@ -1,14 +1,13 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-const ContactSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+const contactSchema = new mongoose.Schema(
+  {
+    name: String,
+    phone: String,
+    designation: String,
+    department: String,
+  },
+  { timestamps: true }
+);
 
-  name: { type: String, required: true },
-  phone: { type: String },
-  email: { type: String },
-  description: { type: String },
-
-  createdAt: { type: Date, default: Date.now },
-});
-
-module.exports = mongoose.model("Contact", ContactSchema);
+export default mongoose.model("Contact", contactSchema);

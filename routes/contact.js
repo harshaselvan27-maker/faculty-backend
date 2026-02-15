@@ -1,62 +1,42 @@
-const express = require("express");
+import express from "express";
+import Contact from "../models/Contact.js";
+
 const router = express.Router();
-const jwt = require("jsonwebtoken");
-const Contact = require("../models/Contact");
 
-// AUTH
-const auth = (req, res, next) => {
-  const token = req.headers.authorization;
-
-  if (!token) return res.json({ error: "No token provided" });
-
+/* ================= ADD CONTACT ================= */
+router.post("/add", async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
+    const contact = await Contact.create(req.body);
+    res.json({ success: true, contact });
   } catch {
-    return res.json({ error: "Invalid token" });
-  }
-};
-
-// ADD CONTACT
-router.post("/add", auth, async (req, res) => {
-  const { name, phone, email, description } = req.body;
-
-  try {
-    const contact = await Contact.create({
-      userId: req.user.id,
-      name,
-      phone,
-      email,
-      description,
-    });
-
-    res.json({ message: "Contact Added", contact });
-  } catch (err) {
-    res.json({ error: "Error adding contact" });
+    res.status(500).json({ error: "Add failed" });
   }
 });
 
-// LIST CONTACTS
-router.get("/list", auth, async (req, res) => {
-  try {
-    const contacts = await Contact.find({ userId: req.user.id }).sort({
-      name: 1,
-    });
-    res.json({ contacts });
-  } catch {
-    res.json({ error: "Error fetching contacts" });
-  }
+/* ================= LIST ================= */
+router.get("/list", async (req, res) => {
+  const list = await Contact.find().sort({ createdAt: -1 });
+  res.json({ list });
 });
 
-// DELETE CONTACT
-router.delete("/delete/:id", auth, async (req, res) => {
+/* ================= DELETE ================= */
+router.delete("/delete/:id", async (req, res) => {
   try {
     await Contact.findByIdAndDelete(req.params.id);
-    res.json({ message: "Contact Deleted" });
+    res.json({ success: true });
   } catch {
-    res.json({ error: "Error deleting contact" });
+    res.status(500).json({ error: "Delete failed" });
   }
 });
 
-module.exports = router;
+/* ================= EDIT ================= */
+router.put("/edit/:id", async (req, res) => {
+  try {
+    await Contact.findByIdAndUpdate(req.params.id, req.body);
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: "Update failed" });
+  }
+});
+
+export default router;
