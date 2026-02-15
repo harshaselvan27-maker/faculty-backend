@@ -6,7 +6,6 @@ import Achievement from "../models/Achievement.js";
 
 const router = express.Router();
 
-/* ================= MULTER ================= */
 const upload = multer({ storage: multer.memoryStorage() });
 
 /* ================= GRIDFS ================= */
@@ -26,7 +25,7 @@ router.get("/", async (req, res) => {
   res.json(list);
 });
 
-/* ================= VIEW FILE ================= */
+/* ================= GET FILE ================= */
 router.get("/file/:id", async (req, res) => {
   try {
     const bucket = getBucket();
@@ -35,23 +34,20 @@ router.get("/file/:id", async (req, res) => {
     const downloadStream = bucket.openDownloadStream(fileId);
 
     downloadStream.on("error", () => {
-      return res.status(404).json({ error: "File not found" });
+      res.status(404).json({ error: "File not found" });
     });
 
-    res.set("Content-Type", "application/pdf");
     downloadStream.pipe(res);
-
   } catch (err) {
-    res.status(500).json({ error: "File load failed" });
+    res.status(500).json({ error: err.message });
   }
 });
 
 /* ================= CREATE ================= */
 router.post("/", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ success: false });
-    }
+    if (!req.file)
+      return res.status(400).json({ message: "File required" });
 
     const bucket = getBucket();
 
@@ -73,26 +69,25 @@ router.post("/", upload.single("file"), async (req, res) => {
 
       res.json({ success: true, achievement });
     });
-
   } catch (err) {
-    res.status(500).json({ success: false });
+    res.status(500).json({ error: err.message });
   }
 });
 
 /* ================= UPDATE ================= */
 router.put("/:id", upload.single("file"), async (req, res) => {
   try {
-    const ach = await Achievement.findById(req.params.id);
-    if (!ach) return res.json({ success: false });
+    const achievement = await Achievement.findById(req.params.id);
+    if (!achievement)
+      return res.status(404).json({ message: "Not found" });
 
-    let fileId = ach.fileId;
-    let filename = ach.filename;
+    let fileId = achievement.fileId;
+    let filename = achievement.filename;
 
-    // If new file uploaded → replace old one
     if (req.file) {
       const bucket = getBucket();
 
-      await bucket.delete(ach.fileId);
+      await bucket.delete(achievement.fileId);
 
       const uploadStream = bucket.openUploadStream(
         req.file.originalname,
@@ -101,62 +96,38 @@ router.put("/:id", upload.single("file"), async (req, res) => {
 
       uploadStream.end(req.file.buffer);
 
-      await new Promise((resolve) => {
-        uploadStream.on("finish", resolve);
-      });
-
       fileId = uploadStream.id;
       filename = req.file.originalname;
     }
 
-    const updated = await Achievement.findByIdAndUpdate(
-      req.params.id,
-      {
-        title: req.body.title,
-        description: req.body.description,
-        date: req.body.date,
-        fileId,
-        filename,
-      },
-      { new: true }
-    );
+    achievement.title = req.body.title;
+    achievement.description = req.body.description;
+    achievement.date = req.body.date;
+    achievement.fileId = fileId;
+    achievement.filename = filename;
 
-    res.json({ success: true, achievement: updated });
+    await achievement.save();
 
+    res.json({ success: true, achievement });
   } catch (err) {
-    res.status(500).json({ success: false });
-  }
-});
-/* ================= VIEW CERTIFICATE ================= */
-router.get("/file/:id", async (req, res) => {
-  try {
-    const bucket = getBucket();
-
-    const fileId = new mongoose.Types.ObjectId(req.params.id);
-
-    const downloadStream = bucket.openDownloadStream(fileId);
-
-    downloadStream.on("error", () => {
-      res.status(404).json({ error: "File not found" });
-    });
-
-    downloadStream.pipe(res);
-  } catch (err) {
-    console.error("FILE VIEW ERROR:", err.message);
-    res.status(500).json({ error: "File error" });
+    res.status(500).json({ error: err.message });
   }
 });
 
 /* ================= DELETE ================= */
 router.delete("/:id", async (req, res) => {
-  const ach = await Achievement.findById(req.params.id);
-  if (!ach) return res.json({ success: true });
+  try {
+    const ach = await Achievement.findById(req.params.id);
+    if (!ach) return res.json({ success: true });
 
-  const bucket = getBucket();
-  await bucket.delete(ach.fileId);
-  await Achievement.findByIdAndDelete(req.params.id);
+    const bucket = getBucket();
+    await bucket.delete(ach.fileId);
+    await Achievement.findByIdAndDelete(req.params.id);
 
-  res.json({ success: true });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;
