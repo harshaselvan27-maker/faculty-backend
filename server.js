@@ -55,7 +55,8 @@ import classRoutes from "./routes/class.js";
 import notesRoutes from "./routes/notes.js";
 import timetableRoutes from "./routes/timetable.js";
 import contactRoutes from "./routes/contact.js";
-import meetingRoutes from "./routes/meeting.js";   // ✅ ADDED
+import meetingRoutes from "./routes/meeting.js";
+  // ✅ ADDED
 
 /* ================= IMPORT MODELS ================= */
 import ClassModel from "./models/Class.js";

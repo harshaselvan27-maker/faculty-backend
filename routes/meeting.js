@@ -1,16 +1,16 @@
-const express = require("express");
-const router = express.Router();
-const jwt = require("jsonwebtoken");
-const Meeting = require("../models/Meeting");
+import express from "express";
+import jwt from "jsonwebtoken";
+import Meeting from "../models/Meeting.js";
 
-// ===============================
-// AUTH MIDDLEWARE
-// ===============================
+const router = express.Router();
+
+/* ================= AUTH ================= */
 const auth = (req, res, next) => {
   const token = req.headers.authorization;
 
-  if (!token)
+  if (!token) {
     return res.status(401).json({ error: "No token provided" });
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -21,14 +21,11 @@ const auth = (req, res, next) => {
   }
 };
 
-//
-// ===============================
-// ADD MEETING
-// ===============================
+/* ================= ADD ================= */
 router.post("/add", auth, async (req, res) => {
-  const { title, description, date, time, location } = req.body;
-
   try {
+    const { title, description, date, time, location } = req.body;
+
     const meeting = await Meeting.create({
       userId: req.user.id,
       title,
@@ -40,15 +37,12 @@ router.post("/add", auth, async (req, res) => {
 
     res.json({ message: "Meeting Scheduled", meeting });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     res.status(500).json({ error: "Error scheduling meeting" });
   }
 });
 
-//
-// ===============================
-// LIST MEETINGS
-// ===============================
+/* ================= LIST ================= */
 router.get("/list", auth, async (req, res) => {
   try {
     const meetings = await Meeting.find({
@@ -57,28 +51,24 @@ router.get("/list", auth, async (req, res) => {
 
     res.json({ meetings });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     res.status(500).json({ error: "Error fetching meetings" });
   }
 });
 
-//
-// ===============================
-// DELETE MEETING
-// ===============================
+/* ================= DELETE ================= */
 router.delete("/delete/:id", auth, async (req, res) => {
   try {
     await Meeting.findOneAndDelete({
       _id: req.params.id,
-      userId: req.user.id, // 🔥 extra security
+      userId: req.user.id,
     });
 
     res.json({ message: "Meeting Deleted" });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     res.status(500).json({ error: "Error deleting meeting" });
   }
 });
 
 export default router;
-
