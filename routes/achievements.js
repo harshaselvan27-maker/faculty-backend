@@ -6,46 +6,25 @@ import Achievement from "../models/Achievement.js";
 
 const router = express.Router();
 
-// ===============================
-// MULTER (MEMORY STORAGE – SAME AS SYLLABUS)
-// ===============================
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+});
 
-// ===============================
-// GRIDFS BUCKET
-// ===============================
 const getBucket = () => {
-  if (!mongoose.connection.db) {
-    throw new Error("MongoDB not connected");
-  }
-
   return new GridFSBucket(mongoose.connection.db, {
     bucketName: "uploads",
   });
 };
 
-// ===============================
-// GET ACHIEVEMENTS
-// ===============================
 router.get("/", async (req, res) => {
   const list = await Achievement.find().sort({ createdAt: -1 });
   res.json(list);
 });
 
-// ===============================
-// ADD ACHIEVEMENT + CERTIFICATE (GRIDFS)
-// ===============================
 router.post("/", upload.single("file"), async (req, res) => {
   try {
-    console.log("BODY:", req.body);
-    console.log("FILE:", req.file ? "YES" : "NO");
-
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Certificate required",
-      });
-    }
+    if (!req.file)
+      return res.status(400).json({ message: "File required" });
 
     const bucket = getBucket();
 
@@ -68,14 +47,11 @@ router.post("/", upload.single("file"), async (req, res) => {
       res.json({ success: true, achievement });
     });
   } catch (err) {
-    console.error("❌ ACHIEVEMENT UPLOAD ERROR:", err.message);
-    res.status(500).json({ success: false, error: err.message });
+    console.log("UPLOAD ERROR:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ===============================
-// DELETE ACHIEVEMENT + FILE
-// ===============================
 router.delete("/:id", async (req, res) => {
   const ach = await Achievement.findById(req.params.id);
   if (!ach) return res.json({ success: true });
