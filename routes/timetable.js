@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-/* ================= IN-MEMORY LIST (TEMP) ================= */
+/* ================= TEMP STORAGE (In Memory) ================= */
 let timetableFiles = [];
 
 /* ================= UPLOAD ================= */
@@ -22,6 +22,8 @@ router.post("/upload", upload.single("file"), (req, res) => {
   try {
     const fileData = {
       id: Date.now().toString(),
+      department: req.body.department,
+      year: req.body.year,
       filename: req.file.filename,
     };
 
@@ -33,6 +35,7 @@ router.post("/upload", upload.single("file"), (req, res) => {
       file: fileData,
     });
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: "Upload failed" });
   }
 });
@@ -53,7 +56,6 @@ router.delete("/delete/:id", (req, res) => {
       return res.status(404).json({ error: "File not found" });
     }
 
-    // delete file from uploads folder
     fs.unlinkSync(`uploads/${file.filename}`);
 
     timetableFiles = timetableFiles.filter(
@@ -62,6 +64,7 @@ router.delete("/delete/:id", (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: "Delete failed" });
   }
 });
