@@ -52,6 +52,8 @@ import leaveRoutes from "./routes/leave.js";
 import achievementRoutes from "./routes/achievements.js";
 import syllabusRoutes from "./routes/syllabus.js";
 import classRoutes from "./routes/class.js";
+import notesRoutes from "./routes/notes.js";
+
 
 /* ================= IMPORT MODELS ================= */
 import ClassModel from "./models/Class.js";
@@ -77,6 +79,7 @@ app.use("/leave", leaveRoutes);
 app.use("/achievements", achievementRoutes);
 app.use("/syllabus", syllabusRoutes);
 app.use("/class", classRoutes);
+app.use("/notes", notesRoutes);
 
 /* ===========================================================
    ================= STUDENT CRUD =============================
