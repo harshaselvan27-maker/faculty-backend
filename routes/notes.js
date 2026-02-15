@@ -1,6 +1,8 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import Note from "../models/Note.js";
+import { Document, Packer, Paragraph, TextRun } from "docx";
+
 
 const router = express.Router();
 
@@ -20,7 +22,54 @@ const auth = (req, res, next) => {
     return res.status(401).json({ error: "Invalid token" });
   }
 };
+router.post("/word", auth, async (req, res) => {
+  try {
+    const { title, content } = req.body;
 
+    const doc = new Document({
+      sections: [
+        {
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: title,
+                  bold: true,
+                  size: 32,
+                }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: content,
+                  break: 1,
+                }),
+              ],
+            }),
+          ],
+        },
+      ],
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=${title}.docx`
+    );
+
+    res.send(buffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Word generation failed" });
+  }
+});
 /* ================= ADD NOTE ================= */
 router.post("/add", auth, async (req, res) => {
   try {
