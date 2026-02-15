@@ -14,4 +14,5 @@ const MeetingSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("Meeting", MeetingSchema);
+export default mongoose.model("Meeting", MeetingSchema);
+
