@@ -1,36 +1,27 @@
-const express = require("express");
+import express from "express";
+import multer from "multer";
+
 const router = express.Router();
-const Timetable = require("../models/Timetable");
 
-// UPLOAD timetable (PDF or Image URL)
-router.post("/", async (req, res) => {
+const storage = multer.diskStorage({
+  destination: "uploads/",
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage });
+
+router.post("/upload", upload.single("file"), (req, res) => {
   try {
-    const tt = new Timetable(req.body);
-    await tt.save();
-    res.json(tt);
+    res.json({
+      success: true,
+      message: "Timetable uploaded",
+      file: req.file.filename,
+    });
   } catch (err) {
-    res.status(500).json({ error: "Failed to upload timetable" });
+    res.status(500).json({ error: "Upload failed" });
   }
 });
 
-// GET timetable
-router.get("/", async (req, res) => {
-  try {
-    const tt = await Timetable.find();
-    res.json(tt);
-  } catch (err) {
-    res.status(500).json({ error: "Error fetching timetable" });
-  }
-});
-
-// DELETE timetable
-router.delete("/:id", async (req, res) => {
-  try {
-    await Timetable.findByIdAndDelete(req.params.id);
-    res.json({ message: "Timetable deleted" });
-  } catch (err) {
-    res.status(500).json({ error: "Error deleting timetable" });
-  }
-});
-
-module.exports = router;
+export default router;
