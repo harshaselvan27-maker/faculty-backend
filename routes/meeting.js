@@ -3,18 +3,21 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const Meeting = require("../models/Meeting");
 
+// ===============================
 // AUTH MIDDLEWARE
+// ===============================
 const auth = (req, res, next) => {
   const token = req.headers.authorization;
 
-  if (!token) return res.json({ error: "No token provided" });
+  if (!token)
+    return res.status(401).json({ error: "No token provided" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
-  } catch {
-    return res.json({ error: "Invalid token" });
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
   }
 };
 
@@ -36,8 +39,9 @@ router.post("/add", auth, async (req, res) => {
     });
 
     res.json({ message: "Meeting Scheduled", meeting });
-  } catch {
-    res.json({ error: "Error scheduling meeting" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Error scheduling meeting" });
   }
 });
 
@@ -47,14 +51,14 @@ router.post("/add", auth, async (req, res) => {
 // ===============================
 router.get("/list", auth, async (req, res) => {
   try {
-    const meetings = await Meeting.find({ userId: req.user.id }).sort({
-      date: 1,
-      time: 1,
-    });
+    const meetings = await Meeting.find({
+      userId: req.user.id,
+    }).sort({ date: 1, time: 1 });
 
     res.json({ meetings });
-  } catch {
-    res.json({ error: "Error fetching meetings" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Error fetching meetings" });
   }
 });
 
@@ -64,10 +68,15 @@ router.get("/list", auth, async (req, res) => {
 // ===============================
 router.delete("/delete/:id", auth, async (req, res) => {
   try {
-    await Meeting.findByIdAndDelete(req.params.id);
+    await Meeting.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id, // 🔥 extra security
+    });
+
     res.json({ message: "Meeting Deleted" });
-  } catch {
-    res.json({ error: "Error deleting meeting" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "Error deleting meeting" });
   }
 });
 
