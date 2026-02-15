@@ -1,12 +1,13 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-const TimetableSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+const timetableSchema = new mongoose.Schema(
+  {
+    department: String,
+    year: String,
+    fileName: String,
+    filePath: String,
+  },
+  { timestamps: true }
+);
 
-  fileName: { type: String, required: true },
-  filePath: { type: String, required: true },
-
-  uploadedAt: { type: Date, default: Date.now },
-});
-
-module.exports = mongoose.model("Timetable", TimetableSchema);
+export default mongoose.model("Timetable", timetableSchema);
